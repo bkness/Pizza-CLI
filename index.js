@@ -23,6 +23,12 @@ const toppingArray = [
 ];
 
 async function main() {
+  try {
+    throw new Error("This is a test error to demonstrate error handling.");
+  } catch (err) {
+    console.error(error("An error occurred: "), warning(err));
+  }
+
   // Ctrl+C will print a friendly message during any inquirer prompt, thanks to SignalRef!
   //See https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-1151843211
   const signalRef = new SignalRef("SIGINT", () => {
@@ -31,13 +37,25 @@ async function main() {
     process.exit(0); // Exit the process
   });
 
+  try {
+    throw new console.log(
+      password(
+        "Welcome to the Pizza Order CLI! Let's get started with some questions.",
+      ),
+    );
+  } catch (err) {
+    console.error(confirm("Oops, Try again.. "), warning(err));
+  }
+
+  // Step 1: Basic info and pizza offer
   let answers = await inquirer.prompt([
     {
       name: "name",
       type: "input",
       message: message("What is your name?"),
-      default: "John",
+      // transformer styles the visible typed text in the prompt UI (not the returned value)
       transformer: (input) => {
+        // flags.pointer, flags.isFinal are available depending on inquirer version
         return answer(input);
       },
     },
@@ -117,12 +135,12 @@ async function main() {
     },
   ]);
 
+  // Step 2: If user says no, confirm
   if (!answers.wants_pizza) {
     const { confirm_answer } = await inquirer.prompt([
       {
         name: "confirm_answer",
         type: "list",
-        prefix: "❓", // Add a question mark emoji prefix for the confirmation
         message: confirm("Are you sure you don't want free pizza?"),
         choices: [
           { name: answer("Yes, I am sure!"), value: true },
@@ -135,13 +153,11 @@ async function main() {
       answers.wants_pizza = true;
     } else {
       // User is sure, skip pizza questions
-      console.log(data(`Hi, ${answers.name} ${answers.last_name}!`));
-      console.log(data(`Your password is ${answers.password}`));
-      console.log(data("No pizza for you!"));
+      console.log(`Hi, ${answers.name} ${answers.last_name}!`);
+      console.log(`Your password is ${answers.password}`);
+      console.log("No pizza for you!");
       console.log(
-        data(
-          "You can change your mind and order pizza at any time by running this program again.",
-        ),
+        "You can change your mind and order pizza at any time by running this program again.",
       );
       const markdown = generateMarkdown(answers);
       fs.writeFileSync("output.md", markdown);
@@ -156,7 +172,6 @@ async function main() {
       {
         name: "pizza_crust",
         type: "list",
-        prefix: "🍕",
         message: message("What type of crust do you want for your pizza?"),
         choices: [
           { name: chalk.red("Thin Crust"), value: "Thin Crust" },
@@ -170,7 +185,6 @@ async function main() {
       {
         name: "pizza_toppings",
         type: "checkbox",
-        prefix: "🍕",
         message: message("What toppings do you want on your pizza?"),
         choices: [
           { name: chalk.red("Pepperoni"), value: "Pepperoni" },
@@ -196,7 +210,7 @@ async function main() {
         ],
       },
     ]);
-    signalRef.unref();
+    signalRef.unref(); // Clean up the signal handler since we're done with prompts
     answers = { ...answers, ...pizzaAnswers };
     console.log(data(`Hi, ${answers.name} ${answers.last_name}!`));
     console.log(data(`Your password is ${answers.password}`));
