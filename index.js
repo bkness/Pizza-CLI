@@ -11,6 +11,7 @@ const confirm = chalk.yellowBright.underline; // Yellow color for confirmations
 const password = chalk.bold.magentaBright.underline;
 const customChalk = new chalk.Instance({ level: 2 }); // Create a new chalk instance for custom colors
 const answer = customChalk.bold.ansi256(56); // Custom green color for answers
+const data = chalk.hex("#00BFFF"); // Custom blue color for console logs
 
 const toppingArray = [
   "Pepperoni",
@@ -22,6 +23,12 @@ const toppingArray = [
 ];
 
 async function main() {
+  try {
+    throw new Error("This is a test error to demonstrate error handling.");
+  } catch (err) {
+    console.error(error("An error occurred: "), warning(err));
+  }
+
   // Ctrl+C will print a friendly message during any inquirer prompt, thanks to SignalRef!
   //See https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-1151843211
   const signalRef = new SignalRef("SIGINT", () => {
@@ -29,6 +36,16 @@ async function main() {
     signalRef.unref(); // Clean up the signal handler
     process.exit(0); // Exit the process
   });
+
+  try {
+    throw new console.log(
+      password(
+        "Welcome to the Pizza Order CLI! Let's get started with some questions.",
+      ),
+    );
+  } catch (err) {
+    console.error(confirm("Oops, Try again.. "), warning(err));
+  }
 
   // Step 1: Basic info and pizza offer
   let answers = await inquirer.prompt([
@@ -59,9 +76,13 @@ async function main() {
     },
     {
       name: "wants_pizza",
-      type: "confirm",
+      type: "list",
       prefix: "🍕", // Add a pizza emoji prefix for the pizza offer
       message: message("Do you want free pizza?"),
+      choices: [
+        { name: answer("Yes!"), value: true },
+        { name: warning("No"), value: false },
+      ],
     },
   ]);
 
@@ -73,8 +94,8 @@ async function main() {
         type: "list",
         message: confirm("Are you sure you don't want free pizza?"),
         choices: [
-          { name: confirm("Yes, I am sure!"), value: true },
-          { name: warning("No, let me have pizza!"), value: false },
+          { name: answer("Yes, I am sure!"), value: true },
+          { name: error("No, let me have pizza!"), value: false },
         ],
       },
     ]);
@@ -102,28 +123,42 @@ async function main() {
       {
         name: "pizza_crust",
         type: "list",
-        message: "What type of crust do you want for your pizza?",
-        choices: ["Thin Crust", "Stuffed Crust", "Deep Dish", "Hand Tossed"],
+        message: message("What type of crust do you want for your pizza?"),
+        choices: [
+          { name: chalk.red("Thin Crust"), value: "Thin Crust" },
+          { name: chalk.green("Stuffed Crust"), value: "Stuffed Crust" },
+          { name: chalk.blue("Deep Dish"), value: "Deep Dish" },
+          { name: chalk.magenta("Hand Tossed"), value: "Hand Tossed" },
+        ],
       },
       {
         name: "pizza_toppings",
         type: "checkbox",
-        message: "What toppings do you want on your pizza?",
-        choices: toppingArray,
+        message: message("What toppings do you want on your pizza?"),
+        choices: [
+          { name: chalk.red("Pepperoni"), value: "Pepperoni" },
+          { name: chalk.yellow("Mushrooms"), value: "Mushrooms" },
+          { name: chalk.cyan("Onions"), value: "Onions" },
+          { name: chalk.magenta("Sausage"), value: "Sausage" },
+          { name: chalk.white("Bacon"), value: "Bacon" },
+          { name: chalk.green("Extra cheese"), value: "Extra cheese" },
+        ],
       },
     ]);
     signalRef.unref(); // Clean up the signal handler since we're done with prompts
     answers = { ...answers, ...pizzaAnswers };
-    console.log(`Hi, ${answers.name} ${answers.last_name}!`);
-    console.log(`Your password is ${answers.password}`);
-    console.log("Pizza is on the way!");
+    console.log(data(`Hi, ${answers.name} ${answers.last_name}!`));
+    console.log(data(`Your password is ${answers.password}`));
+    console.log(data("Pizza is on the way!"));
     if (answers.pizza_toppings && answers.pizza_toppings.length > 0) {
       console.log(
-        `You ordered a ${answers.pizza_crust} pizza with the following toppings: ${answers.pizza_toppings.join(", ")}.`,
+        data(
+          `You ordered a ${answers.pizza_crust} pizza with the following toppings: ${answers.pizza_toppings.join(", ")}.`,
+        ),
       );
     } else {
       console.log(
-        `You ordered a ${answers.pizza_crust} pizza with no toppings.`,
+        data(`You ordered a ${answers.pizza_crust} pizza with no toppings.`),
       );
     }
     const markdown = generateMarkdown(answers);
