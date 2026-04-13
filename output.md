@@ -1,9 +1,9 @@
-# John Doe
+# wadfwawegf hdrhdrh
     
 ## Password
-sfssebs
+drhdrthdr
 
 ## Pizza Order
 Pizza is on the way!
 
-You ordered a Stuffed Crust pizza with the following toppings: Mushrooms,Onions,Sausage.
+You ordered a Thin Crust pizza with the following toppings: Pepperoni,Mushrooms,Onions.

@@ -27,7 +27,7 @@ async function main() {
   //See https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-1151843211
   const signalRef = new SignalRef("SIGINT", () => {
     console.log(warning("\nGracefully shutting down..."));
-    signalRef.unref(); // Clean up the signal handler
+    await.signalRef.unref(); // Clean up the signal handler
     process.exit(0); // Exit the process
   });
 
@@ -45,7 +45,6 @@ async function main() {
       name: "last_name",
       type: "input",
       message: message("What is your last name?"),
-      default: "Doe",
       transformer: (input) => {
         return answer(input);
       },
@@ -56,6 +55,55 @@ async function main() {
       prefix: "🔒", // Add a lock emoji prefix for the password prompt
       message: password("Enter a password:"),
       mask: chalk.grey("*"), // Mask the password input with asterisks
+    },
+    {
+      name: "phone",
+      type: "input",
+      message: message("What is your phone number?"),
+      validate: (value) => {
+        const pass = value.match(
+          /^([01])?[\s.-]?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\s?((?:#|ext\.?\s?|x\.?\s?)(?:\d+)?)?$/i,
+        );
+        if (pass) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid phone number, Use backspace to clear the terminal and try again.",
+          );
+        }
+      },
+    },
+    {
+      name: "toBeDelivered",
+      type: "list",
+      prefix: "📞",
+      message: message("Is this for delivery?"),
+      default: false,
+      choices: [
+        { name: "Yes 👍", value: true },
+        { name: "No 👎", value: false },
+      ],
+    },
+    {
+      type: "list",
+      name: "pizza-amount",
+      message: message("What size pizza do you want?"),
+      choices: ["Large", "Medium", "Small"],
+      filter(val) {
+        return val.toLowerCase();
+      },
+    },
+    {
+      name: "pizza-quantity",
+      type: "input",
+      message: message("How many do you need?"),
+      validate(val) {
+        const valid = !Number.isNaN(Number.parseFloat(val));
+        return (
+          valid ||
+          "Please enter a number, use the backspace key to clear the terminal and try again."
+        );
+      },
     },
     {
       name: "wants_pizza",
@@ -115,6 +163,8 @@ async function main() {
           { name: chalk.green("Stuffed Crust"), value: "Stuffed Crust" },
           { name: chalk.blue("Deep Dish"), value: "Deep Dish" },
           { name: chalk.magenta("Hand Tossed"), value: "Hand Tossed" },
+          new inquirer.Separator(), // Add a separator for better visual organization
+          { name: chalk.yellow("Gluten Free"), value: "Gluten Free" },
         ],
       },
       {
@@ -128,7 +178,21 @@ async function main() {
           { name: chalk.cyan("Onions"), value: "Onions" },
           { name: chalk.magenta("Sausage"), value: "Sausage" },
           { name: chalk.white("Bacon"), value: "Bacon" },
-          { name: chalk.green("Extra cheese"), value: "Extra cheese" },
+          { name: chalk.magenta("Extra cheese"), value: "Extra cheese" },
+        ],
+      },
+      {
+        name: "confirm_pizza",
+        type: "expand",
+        prefix: "❓",
+        message: confirm("Do you confirm your pizza order?"),
+        choices: [
+          { key: "y", name: "Redo?", value: "overwrite" },
+          { key: "a", name: "No I want to start over", value: "overwrite_all" },
+          { key: "d", name: "Yes, I confirm my order!", value: "confirm" },
+          new inquirer.Separator(),
+          { key: "c", name: "Cancel order", value: "cancel" },
+          { key: "x", name: "Call the store", value: "call" },
         ],
       },
     ]);
