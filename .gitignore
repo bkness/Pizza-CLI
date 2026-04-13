@@ -1,0 +1,9 @@
+node_modules/ 
+package-lock.json
+dist/
+build/
+output.md
+*.log
+*.tmp
+.DS_Store
+.env
