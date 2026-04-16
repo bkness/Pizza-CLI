@@ -75,7 +75,7 @@ async function main() {
       message: message("What is your email?"),
       validate: (value) => {
         const pass = value.match(
-          /^[a-Z0-9.%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/i, // Simple email regex for basic validation
+          /^[a-z0-9.%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/i, // Simple email regex for basic validation
         );
         if (pass) {
           return true;
