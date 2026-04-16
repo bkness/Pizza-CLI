@@ -213,7 +213,9 @@ async function main() {
     signalRef.unref(); // Clean up the signal handler since we're done with prompts
     answers = { ...answers, ...pizzaAnswers };
     console.log(data(`Hi, ${answers.name} ${answers.last_name}!`));
-    console.log(data(`Your password is ${answers.password}`));
+    // Mask the password with asterisks
+    const maskedPassword = '*'.repeat(answers.password.length);
+    console.log(data(`Your password is ${maskedPassword}`));
     console.log(data("Pizza is on the way!"));
     if (answers.pizza_toppings && answers.pizza_toppings.length > 0) {
       console.log(
