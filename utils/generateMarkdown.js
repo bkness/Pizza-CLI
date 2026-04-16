@@ -1,9 +1,8 @@
 function generateMarkdown(answers) {
   return `# ${answers.name} ${answers.last_name}
     
-## Password
-${answers.password}
 
+  
 ## Pizza Order
 ${answers.wants_pizza ? "Pizza is on the way!" : "No pizza for you!"}
 
