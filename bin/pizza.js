@@ -1,7 +1,7 @@
 const inquirer = require("inquirer");
 const fs = require("fs");
-const { generateMarkdown } = require("./utils/generateMarkdown.js");
-const SignalRef = require("./signalref.js"); // << Make sure the path matches
+const { generateMarkdown } = require("../src/utils/generateMarkdown.js");
+const SignalRef = require("../src/utils/signalref.js"); // << Make sure the path matches
 const chalk = require("chalk");
 
 const error = chalk.bold.red; // Red color for errors
@@ -37,7 +37,6 @@ async function main() {
       name: "name",
       type: "input",
       message: message("What is your name?"),
-      default: "John",
       validate: (value) => {
         if (value.length > 0 && value.match(/^[a-zA-Z]+$/)) {
           return true;
@@ -56,9 +55,35 @@ async function main() {
     {
       name: "last_name",
       type: "input",
-      message: message("What is your last name?"),
+      message: message("Last name? (\x1b[3m*Optional\x1b[0m):"), // Italicize the optional note using ANSI escape codes
+      validate: (value) => {
+        if (value.length === 0 || value.match(/^[a-zA-Z]+$/)) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid last name, use the backspace key to clear the terminal and try again.",
+          );
+        }
+      },
       transformer: (input) => {
         return answer(input);
+      },
+    },
+    {
+      name: "email",
+      type: "input",
+      message: message("What is your email?"),
+      validate: (value) => {
+        const pass = value.match(
+          /^[a-Z0-9.%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/i, // Simple email regex for basic validation
+        );
+        if (pass) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid email address, use the backspace key to clear the terminal and try again.",
+          );
+        }
       },
     },
     {
@@ -66,7 +91,16 @@ async function main() {
       type: "password",
       prefix: "🔒", // Add a lock emoji prefix for the password prompt
       message: password("Enter a password:"),
-      mask: chalk.grey("*"), // Mask the password input with asterisks
+      mask: chalk.grey("*"), // Mask the password input with asterisk
+      validate: (value) => {
+        if (value.length >= 6) {
+          return true;
+        } else {
+          return warning(
+            "Password must be at least 6 characters long, use the backspace key to clear the terminal and try again.",
+          );
+        }
+      },
     },
     {
       name: "phone",
