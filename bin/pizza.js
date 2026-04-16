@@ -1,7 +1,7 @@
 const inquirer = require("inquirer");
 const fs = require("fs");
-const { generateMarkdown } = require("./utils/generateMarkdown.js");
-const SignalRef = require("./signalref.js"); // << Make sure the path matches
+const { generateMarkdown } = require("../src/utils/generateMarkdown.js");
+const SignalRef = require("../src/utils/signalref.js"); // << Make sure the path matches
 const chalk = require("chalk");
 
 const error = chalk.bold.red; // Red color for errors
@@ -11,7 +11,7 @@ const confirm = chalk.yellowBright.underline; // Yellow color for confirmations
 const password = chalk.bold.magentaBright.underline;
 const customChalk = new chalk.Instance({ level: 2 }); // Create a new chalk instance for custom colors
 const answer = customChalk.bold.ansi256(56); // Custom green color for answers
-const data = chalk.hex("#00BFFF"); // Custom blue color for console logs
+const logColor = chalk.hex("#00BFFF"); // Custom blue color for console logs
 
 const toppingArray = [
   "Pepperoni",
@@ -23,29 +23,13 @@ const toppingArray = [
 ];
 
 async function main() {
-  try {
-    throw new Error("This is a test error to demonstrate error handling.");
-  } catch (err) {
-    console.error(error("An error occurred: "), warning(err));
-  }
-
   // Ctrl+C will print a friendly message during any inquirer prompt, thanks to SignalRef!
   //See https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-1151843211
   const signalRef = new SignalRef("SIGINT", () => {
     console.log(warning("\nGracefully shutting down..."));
-    await.signalRef.unref(); // Clean up the signal handler
+    signalRef.unref(); // Clean up the signal handler
     process.exit(0); // Exit the process
   });
-
-  try {
-    throw new console.log(
-      password(
-        "Welcome to the Pizza Order CLI! Let's get started with some questions.",
-      ),
-    );
-  } catch (err) {
-    console.error(confirm("Oops, Try again.. "), warning(err));
-  }
 
   // Step 1: Basic info and pizza offer
   let answers = await inquirer.prompt([
@@ -53,6 +37,15 @@ async function main() {
       name: "name",
       type: "input",
       message: message("What is your name?"),
+      validate: (value) => {
+        if (value.length > 0 && value.match(/^[a-zA-Z]+$/)) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid name, use the backspace key to clear the terminal and try again.",
+          );
+        }
+      },
       // transformer styles the visible typed text in the prompt UI (not the returned value)
       transformer: (input) => {
         // flags.pointer, flags.isFinal are available depending on inquirer version
@@ -62,9 +55,35 @@ async function main() {
     {
       name: "last_name",
       type: "input",
-      message: message("What is your last name?"),
+      message: message("Last name? (\x1b[3m*Optional\x1b[0m):"), // Italicize the optional note using ANSI escape codes
+      validate: (value) => {
+        if (value.length === 0 || value.match(/^[a-zA-Z]+$/)) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid last name, use the backspace key to clear the terminal and try again.",
+          );
+        }
+      },
       transformer: (input) => {
         return answer(input);
+      },
+    },
+    {
+      name: "email",
+      type: "input",
+      message: message("What is your email?"),
+      validate: (value) => {
+        const pass = value.match(
+          /^[a-z0-9.%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/i, // Simple email regex for basic validation
+        );
+        if (pass) {
+          return true;
+        } else {
+          return warning(
+            "Please enter a valid email address, use the backspace key to clear the terminal and try again.",
+          );
+        }
       },
     },
     {
@@ -72,7 +91,16 @@ async function main() {
       type: "password",
       prefix: "🔒", // Add a lock emoji prefix for the password prompt
       message: password("Enter a password:"),
-      mask: chalk.grey("*"), // Mask the password input with asterisks
+      mask: chalk.grey("*"), // Mask the password input with asterisk
+      validate: (value) => {
+        if (value.length >= 6) {
+          return true;
+        } else {
+          return warning(
+            "Password must be at least 6 characters long, use the backspace key to clear the terminal and try again.",
+          );
+        }
+      },
     },
     {
       name: "phone",
@@ -92,7 +120,7 @@ async function main() {
       },
     },
     {
-      name: "toBeDelivered",
+      name: "delivery",
       type: "list",
       prefix: "📞",
       message: message("Is this for delivery?"),
@@ -104,7 +132,7 @@ async function main() {
     },
     {
       type: "list",
-      name: "pizza-amount",
+      name: "pizza_size",
       message: message("What size pizza do you want?"),
       choices: ["Large", "Medium", "Small"],
       filter(val) {
@@ -112,7 +140,7 @@ async function main() {
       },
     },
     {
-      name: "pizza-quantity",
+      name: "pizza_quantity",
       type: "input",
       message: message("How many do you need?"),
       validate(val) {
@@ -211,26 +239,45 @@ async function main() {
       },
     ]);
     signalRef.unref(); // Clean up the signal handler since we're done with prompts
-    answers = { ...answers, ...pizzaAnswers };
-    console.log(data(`Hi, ${answers.name} ${answers.last_name}!`));
-    // Mask the password with asterisks
-    const maskedPassword = '*'.repeat(answers.password.length);
-    console.log(data(`Your password is ${maskedPassword}`));
-    console.log(data("Pizza is on the way!"));
-    if (answers.pizza_toppings && answers.pizza_toppings.length > 0) {
+
+    if (answers.pizza_quantity < 1 || toParse)
+      answers = { ...answers, ...pizzaAnswers };
+    console.log(logColor(`Hi, ${answers.name} ${answers.last_name}!`));
+    // Pluralize 'pizza' if quantity > 1
+    const pizzaWord =
+      Number(answers["pizza-quantity"]) > 1 ? "pizzas" : "pizza";
+    // if (Number(answers["pizza-quantity"]) > 10) {
+    //   console.log(confirm("Wow, that's a lot of Pizza! You must be really hungry!"));
+    // } ;
+    console.log(logColor(`Your ${pizzaWord} is on the way!`));
+    // Show pickup message if not delivery
+    if (!answers.delivery) {
       console.log(
-        data(
-          `You ordered a ${answers.pizza_crust} pizza with the following toppings: ${answers.pizza_toppings.join(", ")}.`,
+        logColor(
+          `We have ${answers.phone} on file. You didn't choose delivery. Your ${pizzaWord} will be available at the store soon!`,
         ),
       );
     } else {
-      console.log(
-        data(`You ordered a ${answers.pizza_crust} pizza with no toppings.`),
-      );
+      if (answers.pizza_toppings && answers.pizza_toppings.length > 0) {
+        console.log(
+          logColor(
+            ` If our driver gets lost, we will call you at ${answers.phone} to help guide them. Your ${pizzaWord} will be delivered to you soon!
+            You ordered ${answers["pizza_quantity"]} ${Number(answers["pizza_quantity"]) > 10 ? "Wow, that's a lot of pizza! You must be really hungry!" : ""}, 
+            ${answers.pizza_size} ${answers.pizza_crust} ${pizzaWord} with the following toppings: ${answers.pizza_toppings.join(", ")}.`,
+          ),
+        );
+      } else {
+        console.log(
+          logColor(
+            `You ordered ${answers.pizza_quantity} ${answers.pizza_size} ${answers.pizza_crust} ${pizzaWord} with no toppings. 
+            We have ${answers.phone} on file and your ${pizzaWord} will be delivered to you soon! `,
+          ),
+        );
+      }
     }
-    const markdown = generateMarkdown(answers);
-    fs.writeFileSync("output.md", markdown);
   }
+  const markdown = generateMarkdown(answers);
+  fs.writeFileSync("output.md", markdown);
 }
 
 main().catch((err) => {
