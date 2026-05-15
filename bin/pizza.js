@@ -13,14 +13,59 @@ const customChalk = new chalk.Instance({ level: 2 }); // Create a new chalk inst
 const answer = customChalk.bold.ansi256(56); // Custom green color for answers
 const logColor = chalk.hex("#00BFFF"); // Custom blue color for console logs
 
-const toppingArray = [
-  "Pepperoni",
-  "Mushrooms",
-  "Onions",
-  "Sausage",
-  "Bacon",
-  "Extra cheese",
-];
+
+class Pizza {
+  constructor(size, crust, toppings = [], quantity = 1) {
+    this.size = size;
+    this.crust = crust;
+    this.toppings = toppings;
+    this.quantity = quantity;
+  }
+
+  get price() {
+    const base = { large: 14, medium: 11, small: 8 };
+    const toppingCost = this.toppings.length * 1.5;
+    return (base[this.size] + toppingCost) * this.quantity;
+  }
+
+  get label() {
+    const tops =
+      this.toppings.length > 0 ? this.toppings.join(", ") : "no toppings";
+    return `${this.quantity}x ${this.size} ${this.crust} Pizza with ${tops}`;
+  }
+}
+
+class Order {
+  constructor(customer) {
+    this.customer = customer;
+    this.pizzas = [];
+    this.createdAt = new Date();
+  }
+
+  addPizza(pizza) {
+    this.pizzas.push(pizza);
+    return this;
+  }
+
+  get total() {
+    return this.pizzas.reduce((sum, p) => sum + p.price, 0);
+  }
+
+  get receipt() {
+    const lines = this.pizzas.map(
+      (p, i) => ` ${i + 1}. ${p.label} - $${p.price.toFixed(2)}`,
+    );
+    return [
+      `🍕 Order for ${this.customer.name} ${this.customer.last_name}`,
+      `📅 ${this.createdAt.toLocaleDateString()}`,
+      ``,
+      `💰 Total: $${this.total.toFixed(2)}`,
+      this.customer.delivery
+        ? `🏎️ Delivery to: ${this.customer.phone}`
+        : `🏢 Pickup order`,
+    ].join("\n");
+  }
+}
 
 async function main() {
   // Ctrl+C will print a friendly message during any inquirer prompt, thanks to SignalRef!
@@ -182,7 +227,6 @@ async function main() {
     } else {
       // User is sure, skip pizza questions
       console.log(`Hi, ${answers.name} ${answers.last_name}!`);
-      console.log(`Your password is ${answers.password}`);
       console.log("No pizza for you!");
       console.log(
         "You can change your mind and order pizza at any time by running this program again.",
@@ -240,42 +284,44 @@ async function main() {
     ]);
     signalRef.unref(); // Clean up the signal handler since we're done with prompts
 
-    if (answers.pizza_quantity < 1 || toParse)
-      answers = { ...answers, ...pizzaAnswers };
-    console.log(logColor(`Hi, ${answers.name} ${answers.last_name}!`));
-    // Pluralize 'pizza' if quantity > 1
-    const pizzaWord =
-      Number(answers["pizza-quantity"]) > 1 ? "pizzas" : "pizza";
-    // if (Number(answers["pizza-quantity"]) > 10) {
-    //   console.log(confirm("Wow, that's a lot of Pizza! You must be really hungry!"));
-    // } ;
-    console.log(logColor(`Your ${pizzaWord} is on the way!`));
-    // Show pickup message if not delivery
-    if (!answers.delivery) {
+    answers = { ...answers, ...pizzaAnswers };
+
+    const pizza = new Pizza(
+      answers.pizza_size,
+      answers.pizza_crust,
+      answers.pizza_toppings,
+      Number(answers.pizza_quantity)
+    );
+
+    const order = new Order(answers);
+    order.addPizza(pizza);
+
+    const { confirm_pizza } = pizzaAnswers;
+
+    if (confirm_pizza === "confirm") {
+      console.log(logColor(order.receipt));
       console.log(
-        logColor(
-          `We have ${answers.phone} on file. You didn't choose delivery. Your ${pizzaWord} will be available at the store soon!`,
-        ),
+        message(`\n✅ Order confirmed! See you soon, ${answers.name}!`),
       );
-    } else {
-      if (answers.pizza_toppings && answers.pizza_toppings.length > 0) {
-        console.log(
-          logColor(
-            ` If our driver gets lost, we will call you at ${answers.phone} to help guide them. Your ${pizzaWord} will be delivered to you soon!
-            You ordered ${answers["pizza_quantity"]} ${Number(answers["pizza_quantity"]) > 10 ? "Wow, that's a lot of pizza! You must be really hungry!" : ""}, 
-            ${answers.pizza_size} ${answers.pizza_crust} ${pizzaWord} with the following toppings: ${answers.pizza_toppings.join(", ")}.`,
-          ),
-        );
-      } else {
-        console.log(
-          logColor(
-            `You ordered ${answers.pizza_quantity} ${answers.pizza_size} ${answers.pizza_crust} ${pizzaWord} with no toppings. 
-            We have ${answers.phone} on file and your ${pizzaWord} will be delivered to you soon! `,
-          ),
-        );
-      }
+    } else if (confirm_pizza === "overwrite") {
+      console.log(warning("\n🔄 Restarting pizza selection..."));
+      signalRef.unref();
+      return main();
+    } else if (confirm_pizza === "overwrite_all") {
+      console.log(warning("\n🔄 Starting completely over..."));
+      signalRef.unref();
+      return main();
+    } else if (confirm_pizza === "cancel") {
+      console.log(error("\n Order cancelled. No pizza for you!"));
+      process.exit(0);
+    } else if (confirm_pizza === "call") {
+      console.log(
+        message(`\n📞Call us at: ${chalk.bold.white("(555) 867-5309")}`),
+      );
+      console.log(message("We'll help you sort out your order!"));
     }
   }
+
   const markdown = generateMarkdown(answers);
   fs.writeFileSync("output.md", markdown);
 }
